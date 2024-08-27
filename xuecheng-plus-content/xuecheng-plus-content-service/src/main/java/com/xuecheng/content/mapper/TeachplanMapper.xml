@@ -39,9 +39,10 @@
         </collection>
     </resultMap>
 
+
     <!--课程计划树型结构查询-->
     <select id="selectTreeNodes" resultMap="treeNodeResultMap" parameterType="long" >
-        select
+                select
             one.id             one_id,
             one.pname          one_pname,
             one.parentid       one_parentid,
@@ -67,11 +68,12 @@
             m1.media_id mediaId
 
         from teachplan one
-                 INNER JOIN teachplan two on one.id = two.parentid
+                 LEFT OUTER JOIN  teachplan two on one.id = two.parentid
                  LEFT JOIN teachplan_media m1 on m1.teachplan_id = two.id
         where one.parentid = 0 and one.course_id=#{value}
         order by one.orderby,
                  two.orderby
+
     </select>
 
     <!-- 通用查询结果列 -->

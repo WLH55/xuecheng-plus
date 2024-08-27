@@ -1,5 +1,9 @@
 package com.xuecheng.base.exception;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.io.Serializable;
 
 /**
@@ -8,17 +12,10 @@ import java.io.Serializable;
  * @Date 2024/8/26 17:40
  * @Created by cwl
  */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class RestErrorResponse implements Serializable {
     private String errMessage;
 
-    public RestErrorResponse(String errMessage){
-        this.errMessage = errMessage;
-    }
-
-    public String getErrMessage(){
-        return errMessage;
-    }
-    public void setErrMessage(String errMessage){
-        this.errMessage = errMessage;
-    }
 }

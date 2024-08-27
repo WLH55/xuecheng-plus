@@ -1,13 +1,18 @@
 package com.xuecheng.content.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.xuecheng.base.exception.XueChengPlusException;
 import com.xuecheng.content.mapper.TeachplanMapper;
+import com.xuecheng.content.mapper.TeachplanMediaMapper;
 import com.xuecheng.content.model.dto.SaveTeachplanDto;
 import com.xuecheng.content.model.dto.TeachplanDto;
 import com.xuecheng.content.model.po.Teachplan;
+import com.xuecheng.content.model.po.TeachplanMedia;
 import com.xuecheng.content.service.TeachplanService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.endpoint.event.RefreshEventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +29,11 @@ public class TeachplanServiceImpl implements TeachplanService {
 
     @Autowired
     TeachplanMapper teachplanMapper;
+
+    @Autowired
+    private TeachplanMediaMapper teachplanMediaMapper;
+    @Autowired
+    private RefreshEventListener refreshEventListener;
 
     @Override
     public List<TeachplanDto> findTeachplanTree(long courseId) {
@@ -54,6 +64,123 @@ public class TeachplanServiceImpl implements TeachplanService {
         }
 
     }
+
+    /**
+     * 删除课程计划
+     * @param teachplanId
+     */
+    @Override
+    @Transactional
+    public void deleteTeachplan(Long teachplanId) {
+        //大章节下有小章节不能删除
+        if(teachplanId == null){
+            XueChengPlusException.cast("课程Id为空");
+        }
+        QueryWrapper<Teachplan> queryWrapper = new QueryWrapper<>();
+        Teachplan teachplan = teachplanMapper.selectById(teachplanId);
+
+        if(teachplan.getParentid() == 0){
+            queryWrapper.eq("parentid",teachplanId);
+            int count = teachplanMapper.selectCount(queryWrapper);
+            if(count > 0){
+                XueChengPlusException.cast("底下有小章节不能删除");
+            }
+            //大章节下没有小章节可以直接删除
+            teachplanMapper.deleteById(teachplanId);
+
+        }else{
+            //小章节删除要连带那个媒介信息一起删除
+            teachplanMapper.deleteById(teachplanId);
+           QueryWrapper<TeachplanMedia> queryMedia = new QueryWrapper<>();
+           queryMedia.eq("teachplan_id",teachplanId);
+           teachplanMediaMapper.delete(queryMedia);
+
+        }
+
+
+    }
+
+    @Override
+    public void orderByTeachplan(String moveType, Long teachplanId) {
+//        章节移动和小节移动不同
+        Teachplan teachplan = teachplanMapper.selectById(teachplanId);
+        // 获取层级和当前orderby，章节移动和小节移动的处理方式不同
+        Integer grade = teachplan.getGrade();
+        Integer orderby = teachplan.getOrderby();
+        // 章节移动是比较同一课程id下的orderby
+        Long courseId = teachplan.getCourseId();
+        // 小节移动是比较同一章节id下的orderby
+        Long parentid = teachplan.getParentid();
+        if("moveup".equals(moveType)){
+            if (grade == 1) {
+                // 章节上移，找到上一个章节的orderby，然后与其交换orderby
+                // SELECT * FROM teachplan WHERE courseId = 117 AND grade = 1  AND orderby < 1 ORDER BY orderby DESC LIMIT 1
+                LambdaQueryWrapper<Teachplan> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(Teachplan::getGrade, 1)
+                        .eq(Teachplan::getCourseId, courseId)
+                        .lt(Teachplan::getOrderby, orderby)
+                        .orderByDesc(Teachplan::getOrderby)
+                        .last("LIMIT 1");
+                Teachplan tmp = teachplanMapper.selectOne(queryWrapper);
+                exchangeOrderby(teachplan, tmp);
+            } else if (grade == 2) {
+                // 小节上移
+                // SELECT * FROM teachplan WHERE parentId = 268 AND orderby < 5 ORDER BY orderby DESC LIMIT 1
+                LambdaQueryWrapper<Teachplan> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(Teachplan::getParentid, parentid)
+                        .lt(Teachplan::getOrderby, orderby)
+                        .orderByDesc(Teachplan::getOrderby)
+                        .last("LIMIT 1");
+                Teachplan tmp = teachplanMapper.selectOne(queryWrapper);
+                exchangeOrderby(teachplan, tmp);
+            }
+
+
+        }else if("movedown".equals(moveType)){
+            if(grade == 1){
+                //章节下移
+                LambdaQueryWrapper<Teachplan> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(Teachplan::getGrade, 1)
+                        .eq(Teachplan::getCourseId, courseId)
+                        .gt(Teachplan::getOrderby, orderby)
+                        .orderByAsc(Teachplan::getOrderby)
+                        .last("LIMIT 1");
+                Teachplan tmp = teachplanMapper.selectOne(queryWrapper);
+                exchangeOrderby(teachplan,tmp);
+            }else if(grade == 2){
+                LambdaQueryWrapper<Teachplan> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(Teachplan::getGrade, 2)
+                        .eq(Teachplan::getParentid, parentid)
+                        .gt(Teachplan::getOrderby, orderby)
+                        .orderByAsc(Teachplan::getOrderby)
+                        .last("LIMIT 1");
+                Teachplan tmp = teachplanMapper.selectOne(queryWrapper);
+                exchangeOrderby(teachplan,tmp);
+            }
+
+        }
+
+    }
+
+    /**
+     * 交换两个Teachplan的orderby
+     * @param teachplan
+     * @param tmp
+     */
+    private void exchangeOrderby(Teachplan teachplan, Teachplan tmp) {
+        if (tmp == null)
+            XueChengPlusException.cast("已经到头啦，不能再移啦");
+        else {
+            // 交换orderby，更新
+            Integer orderby = teachplan.getOrderby();
+            Integer tmpOrderby = tmp.getOrderby();
+            teachplan.setOrderby(tmpOrderby);
+            tmp.setOrderby(orderby);
+            teachplanMapper.updateById(tmp);
+            teachplanMapper.updateById(teachplan);
+        }
+    }
+
     /**
      * @description 获取最新的排序号
      * @param courseId  课程id

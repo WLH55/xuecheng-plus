@@ -46,6 +46,7 @@ public class MediaFilesController {
 
         Long companyId = 1232141425L;
         UploadFileParamsDto uploadFileParamsDto = new UploadFileParamsDto();
+
         //文件大小
         uploadFileParamsDto.setFileSize(filedata.getSize());
         //图片
@@ -55,6 +56,7 @@ public class MediaFilesController {
         //文件大小
         long fileSize = filedata.getSize();
         uploadFileParamsDto.setFileSize(fileSize);
+
         //创建临时文件
         File tempFile = File.createTempFile("minio", "temp");
         //上传的文件拷贝到临时文件
@@ -63,6 +65,8 @@ public class MediaFilesController {
         String absolutePath = tempFile.getAbsolutePath();
         //上传文件
         UploadFileResultDto uploadFileResultDto = mediaFileService.uploadFile(companyId, uploadFileParamsDto, absolutePath);
+        // 删除临时文件
+        tempFile.delete();
 
         return uploadFileResultDto;
     }

@@ -385,11 +385,13 @@ public class MediaFileServiceImpl implements MediaFileService {
             //创建临时文件
             minioFile=File.createTempFile("minio", ".merge");
             outputStream = new FileOutputStream(minioFile);
+            //把下载下来的输入流复制到输出流里面
             IOUtils.copy(stream,outputStream);
             return minioFile;
         } catch (Exception e) {
             e.printStackTrace();
         }finally {
+            minioFile.delete();
             if(outputStream!=null){
                 try {
                     outputStream.close();

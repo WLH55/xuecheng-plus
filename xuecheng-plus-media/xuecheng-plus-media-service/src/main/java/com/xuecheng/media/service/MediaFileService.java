@@ -9,6 +9,7 @@ import com.xuecheng.media.model.dto.UploadFileResultDto;
 import com.xuecheng.media.model.po.MediaFiles;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.io.File;
 import java.util.List;
 
 /**
@@ -67,6 +68,10 @@ public interface MediaFileService {
 
   RestResponse uploadChunk(String fileMd5,int chunk,String localPath);
 
+  File downloadFileFromMinIO(String bucket, String objectName);
+ boolean addMediaFilesToMinIO(String localFilePath, String mimeType, String bucket, String objectName);
+
+ void addWaitingTask(MediaFiles mediaFiles);
  /**
   * 合并文件
   * @param companyId

@@ -1,5 +1,6 @@
 package com.xuecheng.content.api;
 
+import com.xuecheng.content.model.dto.BindTeachplanMediaDto;
 import com.xuecheng.content.model.po.CourseTeacher;
 import com.xuecheng.content.service.CourseTeacherService;
 import io.swagger.annotations.Api;
@@ -42,4 +43,6 @@ public class CourseTeacherController {
          courseTeacherService.deleteCourseTeacher(courseId,teacherId);
 
     }
+
+
 }

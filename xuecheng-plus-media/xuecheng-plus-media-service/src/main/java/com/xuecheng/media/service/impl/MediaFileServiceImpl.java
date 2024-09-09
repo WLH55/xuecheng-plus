@@ -9,10 +9,12 @@ import com.xuecheng.base.model.PageParams;
 import com.xuecheng.base.model.PageResult;
 import com.xuecheng.base.model.RestResponse;
 import com.xuecheng.media.mapper.MediaFilesMapper;
+import com.xuecheng.media.mapper.MediaProcessMapper;
 import com.xuecheng.media.model.dto.QueryMediaParamsDto;
 import com.xuecheng.media.model.dto.UploadFileParamsDto;
 import com.xuecheng.media.model.dto.UploadFileResultDto;
 import com.xuecheng.media.model.po.MediaFiles;
+import com.xuecheng.media.model.po.MediaProcess;
 import com.xuecheng.media.service.MediaFileService;
 import io.minio.*;
 import io.minio.errors.*;
@@ -67,6 +69,11 @@ public class MediaFileServiceImpl implements MediaFileService {
     ApplicationContext applicationContext;
 
 
+    @Autowired
+    private MediaProcessMapper mediaProcessMapper;
+
+
+
     //普通文件桶
     @Value("${minio.bucket.files}")
     private String bucket_Files;
@@ -80,6 +87,8 @@ public class MediaFileServiceImpl implements MediaFileService {
 
         //构建查询条件对象
         LambdaQueryWrapper<MediaFiles> queryWrapper = new LambdaQueryWrapper<>();
+
+        queryWrapper.orderByDesc(MediaFiles::getCreateDate);
 
         //分页对象
         Page<MediaFiles> page = new Page<>(pageParams.getPageNo(), pageParams.getPageSize());
@@ -190,11 +199,31 @@ public class MediaFileServiceImpl implements MediaFileService {
                 log.error("保存文件信息到数据库失败,{}", mediaFiles.toString());
                 XueChengPlusException.cast("保存文件信息失败");
             }
-            log.debug("保存文件信息到数据库成功,{}", mediaFiles.toString());
+
 
         }
+        //添加到待处理任务表
+        currentProxy.addWaitingTask(mediaFiles);
+        log.debug("保存文件信息到数据库成功,{}", mediaFiles.toString());
         return mediaFiles;
 
+    }
+    @Transactional
+    public void addWaitingTask(MediaFiles mediaFiles) {
+        //文件名称
+        String fileName = mediaFiles.getFilename();
+
+        String extension = fileName.substring(fileName.lastIndexOf('.'));
+        String mimeType = getMimeType(extension);
+
+        if(mimeType.equals("video/x-msvideo")){
+            MediaProcess mediaProcess = new MediaProcess();
+            BeanUtils.copyProperties(mediaFiles,mediaProcess);
+            mediaProcess.setStatus("1");
+            mediaProcess.setFailCount(0);
+
+            mediaProcessMapper.insert(mediaProcess);
+        }
     }
 
     /**

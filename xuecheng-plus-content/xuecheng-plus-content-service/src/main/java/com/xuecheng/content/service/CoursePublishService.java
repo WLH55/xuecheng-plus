@@ -10,5 +10,12 @@ import com.xuecheng.content.model.dto.CoursePreviewDto;
  * @Created by cwl
  */
 public interface CoursePublishService {
+    /**
+     * 获取课程预览信息
+     * @param courseId
+     * @return
+     */
     CoursePreviewDto getCoursePreview(Long courseId);
+
+    void commitAudit(Long commpanyId,Long courseId);
 }

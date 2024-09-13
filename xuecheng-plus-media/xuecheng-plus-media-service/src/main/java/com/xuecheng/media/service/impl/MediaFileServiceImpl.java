@@ -87,6 +87,7 @@ public class MediaFileServiceImpl implements MediaFileService {
 
         //构建查询条件对象
         LambdaQueryWrapper<MediaFiles> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.like(MediaFiles::getFilename,"%" + queryMediaParamsDto.getFilename() + "%");
 
         queryWrapper.orderByDesc(MediaFiles::getCreateDate);
 
@@ -394,6 +395,21 @@ public class MediaFileServiceImpl implements MediaFileService {
         //=====清除分块文件=====
         clearChunkFiles(chunkFileFolderPath,chunkTotal);
         return RestResponse.success(true);
+    }
+
+    /**
+     * 获取媒介信息
+     * @param mediaId
+     * @return
+     */
+    @Override
+    public MediaFiles getFileById(String mediaId) {
+        MediaFiles mediaFiles = new MediaFiles();
+        mediaFiles = mediaFilesMapper.selectById(mediaId);
+        if(mediaFiles == null){
+            XueChengPlusException.cast("该视频不存在！");
+        }
+        return mediaFiles;
     }
 
     /**

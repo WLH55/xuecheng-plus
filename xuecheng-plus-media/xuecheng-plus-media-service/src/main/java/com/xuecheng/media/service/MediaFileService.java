@@ -1,5 +1,6 @@
 package com.xuecheng.media.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.xuecheng.base.model.PageParams;
 import com.xuecheng.base.model.PageResult;
 import com.xuecheng.base.model.RestResponse;
@@ -18,7 +19,7 @@ import java.util.List;
  * @date 2022/9/10 8:55
  * @version 1.0
  */
-public interface MediaFileService {
+public interface MediaFileService  {
 
  /**
   * @description 媒资文件查询方法
@@ -81,4 +82,10 @@ public interface MediaFileService {
   * @return
   */
   RestResponse mergechunks(Long companyId,String fileMd5,int chunkTotal,UploadFileParamsDto uploadFileParamsDto);
+
+ //根据媒资id查询文件信息
+ MediaFiles getFileById(String mediaId);
+
+
 }
+

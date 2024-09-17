@@ -3,6 +3,8 @@ package com.xuecheng.content.api;
 import com.xuecheng.content.model.dto.CourseBaseInfoDto;
 import com.xuecheng.content.model.dto.CoursePreviewDto;
 import com.xuecheng.content.service.CoursePublishService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +18,7 @@ import org.springframework.web.servlet.ModelAndView;
  * @Date 2024/9/12 21:24
  * @Created by cwl
  */
+@Api(value = "课程预览发布接口",tags = "课程预览发布接口")
 @RestController
 public class CoursePublishController {
     @Autowired
@@ -38,4 +41,12 @@ public class CoursePublishController {
         coursePublishService.commitAudit(companyId,courseId);
 
     }
+
+    @ApiOperation("课程发布")
+    @PostMapping("/coursepublish/{courseId}")
+    public void coursePublish(@PathVariable("courseId") Long courseId){
+
+    }
+
+
 }

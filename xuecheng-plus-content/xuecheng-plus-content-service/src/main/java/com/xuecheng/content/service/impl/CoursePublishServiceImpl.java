@@ -6,14 +6,12 @@ import com.xuecheng.base.constant.CourseAuditStatus;
 import com.xuecheng.base.exception.XueChengPlusException;
 import com.xuecheng.content.mapper.CourseBaseMapper;
 import com.xuecheng.content.mapper.CourseMarketMapper;
+import com.xuecheng.content.mapper.CoursePublishMapper;
 import com.xuecheng.content.mapper.CoursePublishPreMapper;
 import com.xuecheng.content.model.dto.CourseBaseInfoDto;
 import com.xuecheng.content.model.dto.CoursePreviewDto;
 import com.xuecheng.content.model.dto.TeachplanDto;
-import com.xuecheng.content.model.po.CourseBase;
-import com.xuecheng.content.model.po.CourseMarket;
-import com.xuecheng.content.model.po.CoursePublishPre;
-import com.xuecheng.content.model.po.Teachplan;
+import com.xuecheng.content.model.po.*;
 import com.xuecheng.content.service.CourseBaseInfoService;
 import com.xuecheng.content.service.CoursePublishService;
 import com.xuecheng.content.service.TeachplanService;
@@ -22,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -49,6 +48,10 @@ public class CoursePublishServiceImpl implements CoursePublishService {
 
     @Autowired
     private CoursePublishPreMapper coursePublishPreMapper;
+
+
+    @Autowired
+    private CoursePublishMapper coursePublishMapper;
 
     @Override
     public CoursePreviewDto getCoursePreview(Long courseId) {
@@ -127,4 +130,67 @@ public class CoursePublishServiceImpl implements CoursePublishService {
         courseBase.setStatus(CourseAuditStatus.SUBMITTED.getCode());
         courseBaseMapper.updateById(courseBase);
     }
+
+    /**
+     * 发布课程
+     * @param commpanyId
+     * @param courseId
+     */
+    @Override
+    @Transactional
+    public void publishCourse(Long commpanyId, Long courseId) {
+
+        //约束校验
+        //查询课程预发布表
+        CoursePublishPre coursePublishPre = coursePublishPreMapper.selectById(courseId);
+        if(coursePublishPre == null){
+            XueChengPlusException.cast("请先提交课程审核，审核通过后才可发布");
+        }
+        if(!coursePublishPre.getCompanyId().equals(commpanyId)){
+            XueChengPlusException.cast("不允许提交其他机构的课程");
+        }
+        String auditStatus = coursePublishPre.getStatus();
+        if(!CourseAuditStatus.AUDIT_PASSED.getCode().equals(auditStatus)){
+            XueChengPlusException.cast("操作失败，课程审核通过后才可发布");
+        }
+        //保存课程发布信息
+        saveCoursePublish(courseId);
+
+        //保存消息表
+        saveCoursePublishMessage(courseId);
+
+        //删除课程预发布表对应记录
+        coursePublishPreMapper.deleteById(courseId);
+
+
+    }
+
+
+    private void saveCoursePublish(Long courseId){
+        //整合课程发布信息
+        //查询课程预发布表
+        CoursePublishPre coursePublishPre = coursePublishPreMapper.selectById(courseId);
+        if(coursePublishPre == null){
+            XueChengPlusException.cast("课程预发布数据为空");
+        }
+        CoursePublish coursePublish = new CoursePublish();
+        BeanUtils.copyProperties(coursePublishPre,coursePublish);
+        coursePublish.setStatus("203002");
+        CoursePublish coursePublishUpdate = coursePublishMapper.selectById(courseId);
+
+        if(coursePublishUpdate == null) {
+            coursePublishMapper.insert(coursePublish);
+        }else{
+            coursePublishMapper.updateById(coursePublish);
+        }
+        //更新课程基本表的发布状态
+        CourseBase courseBase = courseBaseMapper.selectById(courseId);
+        courseBase.setStatus("203002");
+        courseBaseMapper.updateById(courseBase);
+    }
+
+    private void saveCoursePublishMessage(Long courseId){
+
+    }
+
 }
